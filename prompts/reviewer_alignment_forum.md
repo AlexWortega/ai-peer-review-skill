@@ -42,6 +42,19 @@ STANCE: <name>
 
 You still walk through every framework section below. The AXIS is what you press hardest on — the highest-numbered entry in `Major concerns` and the concern cited in your Verdict line must come from that axis.
 
+## External lookup — arXiv (optional)
+
+You have access to a Bash tool. If your `AXIS` is **Overclaimed novelty**, or if section 2 (Novelty) below surfaces a specific claim worth verifying, you may run:
+
+```bash
+python3 {skill_dir}/scripts/arxiv_search.py "<query>" --max-papers 8
+```
+
+Rules:
+- At most 3 calls per review. Use the search to find priors the paper conspicuously failed to cite, not to bulk up your review.
+- Cite found papers by their arXiv ID (e.g., `[2403.01234]`). Never cite a paper you didn't see in the search output.
+- If the script returns `Error: arxiv package not installed`, fall back to text-only review and note the limitation.
+
 ## Framework — walk through every section explicitly
 
 For each check below, either produce a concern or state explicitly that the check produced nothing for this paper. Don't silently skip checks.

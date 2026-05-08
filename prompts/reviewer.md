@@ -40,6 +40,19 @@ Write the review with that lens as your primary frame and that stance as your to
 
 This SSoT preamble is the ONLY randomness step — the rest of your review is deterministic given your seed.
 
+## External lookup — arXiv (optional)
+
+You have access to a Bash tool. If your `LENS` is **Related work and novelty attribution**, or if a specific novelty claim in this paper warrants a prior-art check, you may run:
+
+```bash
+python3 {skill_dir}/scripts/arxiv_search.py "<query>" --max-papers 8
+```
+
+Rules:
+- Use it sparingly — at most 3 calls. Skip entirely if the paper itself thoroughly cites priors and you have no specific suspicion.
+- For every paper you cite as missing prior art in your review, include the arXiv ID returned by the search (e.g., `[2310.12345]`). Do not cite a paper you did not see in the search output — fabrication remains forbidden.
+- If the script returns `Error: arxiv package not installed`, do not retry. Fall back to reviewing only the paper text and note in your review that an external prior-art check was unavailable.
+
 ## Output format
 
 Produce a single Markdown document with these sections:

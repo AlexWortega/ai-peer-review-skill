@@ -51,7 +51,7 @@ NATO codenames in order: `alfa, bravo, charlie, delta, echo, foxtrot, golf, hote
 - If `alignment_critic=true` (default), pick **exactly one** codename uniformly at random from the panel and assign it `prompts/reviewer_alignment_forum.md`. The remaining `num_reviewers - 1` slots use `prompts/reviewer.md`. Do not disclose which codename is the critic — anonymity must be preserved through synthesis.
 - If `alignment_critic=false`, all slots use `prompts/reviewer.md`.
 
-Substitute `{domain}`, `{reviewer_id}`, `{paper_text}` in each prompt before sending.
+Substitute `{domain}`, `{reviewer_id}`, `{paper_text}`, and `{skill_dir}` in each prompt before sending. `{skill_dir}` must be the absolute path to this skill's directory (so the reviewer can locate `scripts/arxiv_search.py`).
 
 Reviewers must NOT see each other's outputs. Each is a single, independent generation.
 
@@ -127,6 +127,22 @@ All reviewer prompts open with a `Step 0 — Seed your perspective` block adapte
 Why: N parallel Sonnet reviewers with the same prompt collapse to highly correlated critiques — temperature alone does not give enough viewpoint diversity. SSoT injects entropy explicitly and routes it through a discrete mapping, so reviewer alfa might argue the paper from "External validity, Adversarial" while bravo presses "Statistical methodology, Steelman-then-press". The seed is preserved in the saved `review_<nato>.md` for reproducibility — re-running with the same seed should produce the same review angle.
 
 Don't strip the SSoT block from prompts. Don't seed the reviewers from the host (the model emitting its own SEED is the point of the technique).
+
+## arXiv prior-art lookup (`scripts/arxiv_search.py`)
+
+Reviewer prompts include an `External lookup — arXiv` block that lets a reviewer run `python3 {skill_dir}/scripts/arxiv_search.py "<query>"` via Bash to verify novelty claims. The script returns `[arxiv_id] (year) Title / Authors / Summary` rows, capped at 8 results, sorted by relevance (or `--sort date` for recency).
+
+When this kicks in:
+- Standard reviewer with `LENS = Related work and novelty attribution` (LENS=4).
+- Alignment-forum critic with `AXIS = Overclaimed novelty` (AXIS=5).
+- Either reviewer when a specific novelty claim in the paper warrants a targeted check.
+
+Hard caps in the prompt:
+- Max 3 calls per review (avoid blowing up latency).
+- Cite found papers by arXiv ID only — fabrication remains forbidden.
+- If `arxiv` package is missing, the script returns a clear error; the reviewer falls back to text-only review.
+
+Dependency: `pip install arxiv`. Not bundled — install once in the environment that runs the reviewer subagents. If the user runs the skill without arxiv installed, reviewers degrade gracefully (no prior-art lookup, otherwise normal review).
 
 ## The alignment-forum critic
 
