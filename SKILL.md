@@ -37,7 +37,21 @@ Confirm the document looks like an academic paper (abstract, methods/results, re
 
 ### 3. Spawn reviewers in parallel — MANDATORY
 
-Issue all `num_reviewers` Agent calls in **one tool-use block** (one assistant message with multiple `Agent` invocations). Sequential review generation defeats the purpose and is much slower.
+You MUST emit all `num_reviewers` Agent invocations as parallel `tool_use` blocks **inside a single assistant turn**. This is the core mechanic of the skill — without it, the skill is just slow sequential reviews, which is what the user is paying you to avoid.
+
+**WRONG — never do this:**
+- Turn 1: emit one Agent call for alfa, wait for the result.
+- Turn 2: emit one Agent call for bravo, wait for the result.
+- Turn 3: emit one Agent call for charlie, wait for the result.
+
+This produces 3× the wall-clock time and is the failure mode this skill exists to prevent.
+
+**RIGHT — always do this:**
+- Single turn: emit `num_reviewers` Agent `tool_use` blocks back-to-back in ONE assistant message. The runtime executes them concurrently. You get all results in roughly `max(reviewer_time)` instead of `sum(reviewer_time)`.
+
+**Self-check before emitting your first Agent call:** Am I about to emit `num_reviewers` separate `tool_use` blocks in this single response? If only one is drafted, stop and add the others. If you find yourself writing prose like "Now let me start with alfa…" or "Next I'll spawn bravo…" between Agent calls, you are already failing — go back and bundle them.
+
+The only correct pattern is N Agent invocations, one assistant message, no narration in between.
 
 For each reviewer:
 - `subagent_type`: `general-purpose`
