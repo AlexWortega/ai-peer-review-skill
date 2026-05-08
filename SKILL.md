@@ -17,6 +17,7 @@ Multi-reviewer peer review of an academic paper. Models the workflow of [poldrac
 | `output_dir` | no | `./papers/<paper-stem>/` | Where review artifacts are written. |
 | `skip_meta` | no | `false` | If `true`, only individual reviews are produced. |
 | `overwrite` | no | `false` | If `false`, reuse any `review_*.md` already present and only run missing reviewers + meta. |
+| `alignment_critic` | no | `true` | If `true`, one of the `num_reviewers` slots is filled by an AI-Alignment-Forum-style critic (see `prompts/reviewer_alignment_forum.md`) instead of a generic reviewer. Set `false` to use only generic reviewers. |
 
 If the user invokes the skill ambiguously, ask only for `paper` — infer the rest.
 
@@ -41,9 +42,15 @@ Issue all `num_reviewers` Agent calls in **one tool-use block** (one assistant m
 For each reviewer:
 - `subagent_type`: `general-purpose`
 - `description`: `"Independent peer review (codename <nato>)"`
-- `prompt`: contents of `prompts/reviewer.md` with `{domain}`, `{reviewer_id}`, `{paper_text}` substituted.
+- `prompt`: see prompt assignment below.
 
 NATO codenames in order: `alfa, bravo, charlie, delta, echo, foxtrot, golf, hotel`.
+
+**Prompt assignment:**
+- If `alignment_critic=true` (default), pick **exactly one** codename uniformly at random from the panel and assign it `prompts/reviewer_alignment_forum.md`. The remaining `num_reviewers - 1` slots use `prompts/reviewer.md`. Do not disclose which codename is the critic — anonymity must be preserved through synthesis.
+- If `alignment_critic=false`, all slots use `prompts/reviewer.md`.
+
+Substitute `{domain}`, `{reviewer_id}`, `{paper_text}` in each prompt before sending.
 
 Reviewers must NOT see each other's outputs. Each is a single, independent generation.
 
@@ -96,6 +103,14 @@ Write `<output_dir>/results.json`:
 - **Don't soften the criticism.** The meta-review must preserve specific, actionable critiques. If a reviewer recommended "Reject", say so — don't average it into "Major revision" silently.
 - **Reuse existing reviews** when `overwrite=false` and `review_<nato>.md` already exists in `output_dir`. Only run the missing reviewers + meta-review.
 - **No fabricated citations.** If a reviewer claims a paper says X, that claim must be grounded in the supplied `paper_text`. Reviewer prompts already enforce this; don't dilute it.
+
+## The alignment-forum critic
+
+By default one panel slot is filled by a reviewer that follows Neel Nanda's *[Highly Opinionated Advice on How to Write ML Papers](https://www.alignmentforum.org/posts/eJGptPbbFPZGLpjsp/highly-opinionated-advice-on-how-to-write-ml-papers)* — narrative compression, novelty attribution, hard red-teaming of evidence (cherry-picking, post-hoc analysis, weak baselines, missing ablations, p-value skepticism, alternative explanations), reproducibility checks, and an explicit "what did this paper actually update in my beliefs?" question.
+
+The critic produces the same Markdown shape as the standard reviewer (Summary / Major / Minor / Verdict, plus a `Belief update` block) so the meta-review and concerns table can ingest its output without special-casing. Each major concern is tagged with the framework section it came from (e.g. `[Evidence — baselines]`).
+
+This adds genuine viewpoint diversity to a panel that would otherwise be all-Claude-of-the-same-flavour. Disable with `alignment_critic=false` if you specifically want a uniform panel.
 
 ## Optional: true multi-LLM mode
 

@@ -10,6 +10,7 @@ Given a PDF (or DOCX / `.txt` / `.md`) of a paper, the skill:
 
 1. Extracts the text.
 2. **Spawns N reviewer subagents in parallel** with anonymized NATO codenames (`alfa`, `bravo`, `charlie`, …). Each subagent sees only the paper and produces an independent, structured review (summary → major concerns → minor concerns → verdict).
+   - By default, one of the panel slots is filled by an **AI Alignment Forum-style critic** that follows Neel Nanda's *[Highly Opinionated Advice on How to Write ML Papers](https://www.alignmentforum.org/posts/eJGptPbbFPZGLpjsp/highly-opinionated-advice-on-how-to-write-ml-papers)* — hard red-teaming on narrative, novelty, baselines, ablations, post-hoc analysis, p-value rigor, reproducibility, and an explicit "what did this update in my beliefs?" check. Disable with `alignment_critic=false`.
 3. **Synthesizes a meta-review** in the main thread, identifying common vs unique concerns, ranking the reviewers by usefulness, and producing a final verdict.
 4. **Extracts a concerns table** — a boolean matrix of `concern × reviewer` — and saves it as CSV.
 5. Bundles everything into `results.json`.
@@ -78,11 +79,12 @@ Optional knobs (just say them in plain language):
 
 ```
 .
-├── SKILL.md              # frontmatter + workflow Claude follows
+├── SKILL.md                              # frontmatter + workflow Claude follows
 ├── prompts/
-│   ├── reviewer.md       # template fed to each reviewer subagent
-│   └── metareview.md     # template for the synthesis step
-└── README.md             # this file
+│   ├── reviewer.md                       # generic reviewer template
+│   ├── reviewer_alignment_forum.md       # AAF-style critic (Nanda framework)
+│   └── metareview.md                     # synthesis template
+└── README.md                             # this file
 ```
 
 ## Credits
