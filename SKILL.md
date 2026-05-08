@@ -120,6 +120,14 @@ Write `<output_dir>/results.json`:
 - **Reuse existing reviews** when `overwrite=false` and `review_<nato>.md` already exists in `output_dir`. Only run the missing reviewers + meta-review.
 - **No fabricated citations.** If a reviewer claims a paper says X, that claim must be grounded in the supplied `paper_text`. Reviewer prompts already enforce this; don't dilute it.
 
+## Diversity via String Seed of Thought (SSoT)
+
+All reviewer prompts open with a `Step 0 — Seed your perspective` block adapted from [String Seed of Thought (arXiv:2510.21150)](https://arxiv.org/abs/2510.21150). Each reviewer first emits a 32-char random hex `SEED`, then deterministically derives a `LENS` (or `AXIS` for the alignment critic) and a `STANCE` from byte-slices of that seed.
+
+Why: N parallel Sonnet reviewers with the same prompt collapse to highly correlated critiques — temperature alone does not give enough viewpoint diversity. SSoT injects entropy explicitly and routes it through a discrete mapping, so reviewer alfa might argue the paper from "External validity, Adversarial" while bravo presses "Statistical methodology, Steelman-then-press". The seed is preserved in the saved `review_<nato>.md` for reproducibility — re-running with the same seed should produce the same review angle.
+
+Don't strip the SSoT block from prompts. Don't seed the reviewers from the host (the model emitting its own SEED is the point of the technique).
+
 ## The alignment-forum critic
 
 By default one panel slot is filled by a reviewer that follows Neel Nanda's *[Highly Opinionated Advice on How to Write ML Papers](https://www.alignmentforum.org/posts/eJGptPbbFPZGLpjsp/highly-opinionated-advice-on-how-to-write-ml-papers)* — narrative compression, novelty attribution, hard red-teaming of evidence (cherry-picking, post-hoc analysis, weak baselines, missing ablations, p-value skepticism, alternative explanations), reproducibility checks, and an explicit "what did this paper actually update in my beliefs?" question.
