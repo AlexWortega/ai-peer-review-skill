@@ -2,6 +2,9 @@ The following are independent peer reviews of a single research article. Each re
 
 Synthesize a meta-review with the sections below. Refer to reviewers only by codename throughout.
 
+## Per-reviewer verdicts
+A bulleted list, one line per reviewer codename, showing the **exact verdict** they assigned (Reject / Major revision / Minor revision / Accept) followed by a one-sentence summary of their reasoning. Format: `- **alfa** — Major revision: <one-sentence reasoning>`. Do not soften or aggregate — copy each reviewer's verdict verbatim.
+
 ## Common concerns
 Issues raised by two or more reviewers. For each: a one-sentence description, the codenames of the reviewers who raised it, and a brief quote of the strongest formulation.
 

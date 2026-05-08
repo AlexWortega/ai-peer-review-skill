@@ -13,7 +13,7 @@ Multi-reviewer peer review of an academic paper. Models the workflow of [poldrac
 |---|---|---|---|
 | `paper` | yes | — | Path to a PDF, DOCX, or `.txt`/`.md` of the paper. |
 | `domain` | no | inferred | Reviewer field, e.g. `"neuroscience and brain imaging"`. Inferred from the paper's title/abstract if not supplied. |
-| `num_reviewers` | no | `5` | Independent reviewers to spawn. Min 3, max 8. |
+| `num_reviewers` | no | `3` | Independent reviewers to spawn. Min 3, max 8. |
 | `output_dir` | no | `./papers/<paper-stem>/` | Where review artifacts are written. |
 | `skip_meta` | no | `false` | If `true`, only individual reviews are produced. |
 | `overwrite` | no | `false` | If `false`, reuse any `review_*.md` already present and only run missing reviewers + meta. |
@@ -41,6 +41,7 @@ Issue all `num_reviewers` Agent calls in **one tool-use block** (one assistant m
 
 For each reviewer:
 - `subagent_type`: `general-purpose`
+- `model`: `"sonnet"` — **mandatory**. Reviewer subagents must run on Sonnet, not inherit the main thread's model. Opus for 5 parallel reviewers is slow and wasteful; Sonnet 4.6 is fast and produces high-quality reviews on this task. The meta-review stays on whatever the main thread runs (typically Opus).
 - `description`: `"Independent peer review (codename <nato>)"`
 - `prompt`: see prompt assignment below.
 
@@ -72,7 +73,21 @@ The meta-review contains a `CONCERNS_TABLE_DATA` block with JSON. Parse it with 
 
 Strip the `CONCERNS_TABLE_DATA` block out of the saved `meta_review.md` (keep the human-readable part only).
 
-### 7. Save the bundle
+### 7. Surface per-reviewer verdicts to the user
+
+In the final assistant message that reports the review is done, include a compact verdict table — one line per codename — pulled from each `review_<nato>.md`'s **Verdict** section. Example:
+
+```
+alfa     — Major revision
+bravo    — Reject
+charlie  — Major revision
+---
+Consensus: Major revision
+```
+
+The user must see individual verdicts at a glance without opening files.
+
+### 8. Save the bundle
 
 Write `<output_dir>/results.json`:
 
@@ -99,6 +114,7 @@ Write `<output_dir>/results.json`:
 ## Rules
 
 - **Parallelism is mandatory** — one assistant message, N `Agent` calls. Sequential is wrong.
+- **Sonnet for reviewers is mandatory** — every `Agent` call must include `model: "sonnet"`. Don't let subagents inherit Opus from the main thread.
 - **Anonymity matters** — when synthesizing, refer to reviewers only by NATO codename. Don't disclose that they're all Claude subagents inside the meta-review prose.
 - **Don't soften the criticism.** The meta-review must preserve specific, actionable critiques. If a reviewer recommended "Reject", say so — don't average it into "Major revision" silently.
 - **Reuse existing reviews** when `overwrite=false` and `review_<nato>.md` already exists in `output_dir`. Only run the missing reviewers + meta-review.
