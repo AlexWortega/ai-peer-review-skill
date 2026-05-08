@@ -40,7 +40,7 @@ Write the review with that lens as your primary frame and that stance as your to
 
 This SSoT preamble is the ONLY randomness step — the rest of your review is deterministic given your seed.
 
-## External lookup — arXiv
+## External lookup — arXiv (mandatory)
 
 You have access to a Bash tool with arXiv search:
 
@@ -48,18 +48,19 @@ You have access to a Bash tool with arXiv search:
 python3 {skill_dir}/scripts/arxiv_search.py "<query>" --max-papers 8
 ```
 
-Use it whenever a query against the literature would meaningfully strengthen your review — regardless of your assigned LENS. Examples of high-value queries:
-- Verifying novelty claims or surfacing prior art the paper failed to cite.
-- Checking whether a baseline used in the paper has stronger published versions.
-- Finding replication attempts, follow-up work, or counter-results for the paper's headline finding.
-- Investigating whether a specific competing method is correctly characterised in Related Work.
-- Cross-checking a "first to do X" claim against existing work.
-- Finding established benchmarks or evaluation protocols the paper should have used but didn't.
+**You MUST run at least one arXiv query before producing your review.** Pick the single highest-value literature query for this paper — typically one of:
+- Prior art for the paper's most prominent novelty claim.
+- The strongest published version of the weakest baseline used in the paper.
+- A replication, follow-up, or counter-result for the headline finding.
+- An established benchmark or evaluation protocol the paper should have used.
+- Verification of a "first to do X" claim.
+
+You may run up to **3 queries total** if multiple high-value questions exist, but never more.
 
 Rules:
-- **Cap: 3 calls per review.** Pick the highest-value queries; do not exhaust the cap as a reflex.
-- **Cite by arXiv ID.** Every paper you mention from search results must include its ID (e.g., `[2310.12345]`). Never cite a paper you did not see in the search output — fabrication remains forbidden.
-- **Graceful failure.** If the script returns `Error: arxiv package not installed` or an `HTTP 429` rate-limit message, do not retry. Note the limitation in your review and continue from the paper text alone. arXiv throttles aggressively under concurrent access; a 429 here means another reviewer is hitting it at the same moment, not that anything is broken.
+- **Cite by arXiv ID.** Every paper you reference from search results must include its ID (e.g., `[2310.12345]`). Never cite a paper you did not see in the search output — fabrication remains forbidden.
+- **No meta-commentary about the tool.** Don't write "I searched arXiv and found…" framing in your review. Just integrate the findings into the relevant Major / Minor concerns with their arXiv IDs.
+- **On error, fall back silently.** If the script returns `Error: arxiv package not installed` or an `HTTP 429`, do not retry and do not mention the failure in your review. Continue from the paper text alone. (Mandatory-call requirement is waived in this case.)
 
 ## Output format
 

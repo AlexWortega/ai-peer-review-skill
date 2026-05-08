@@ -42,7 +42,7 @@ STANCE: <name>
 
 You still walk through every framework section below. The AXIS is what you press hardest on — the highest-numbered entry in `Major concerns` and the concern cited in your Verdict line must come from that axis.
 
-## External lookup — arXiv
+## External lookup — arXiv (mandatory)
 
 You have access to a Bash tool with arXiv search:
 
@@ -50,17 +50,19 @@ You have access to a Bash tool with arXiv search:
 python3 {skill_dir}/scripts/arxiv_search.py "<query>" --max-papers 8
 ```
 
-Use it whenever a literature check would sharpen your red-team — regardless of your assigned AXIS. Particularly useful for:
-- **Novelty section** — finding priors the paper conspicuously didn't cite or mischaracterised.
-- **Baselines** — checking whether stronger published baselines exist than the ones the authors compared against.
-- **Distinguishing tests** — finding follow-up or replication work that already differentiated the hypotheses.
-- **Statistical rigour** — surfacing meta-analyses, replication attempts, or counter-results that contextualise the paper's effect size.
-- **"First to do X" claims** — verifying against existing work.
+**You MUST run at least one arXiv query before producing your review.** A red-team without a literature check is half a red-team. Pick the single highest-value query — usually one of:
+- Prior art the paper conspicuously failed to cite or mischaracterised (Novelty).
+- A stronger published baseline than the one the authors used (Evidence — baselines).
+- A replication or follow-up that differentiated the hypotheses the paper claims to differentiate (Evidence — distinguishing tests).
+- A meta-analysis / replication / counter-result that contextualises the paper's effect size (Statistical rigour).
+- Verification of a "first to do X" claim.
+
+You may run up to **3 queries total** if multiple high-value questions exist, but never more.
 
 Rules:
-- **Cap: 3 calls per review.** Pick the highest-value queries; bulk searches don't strengthen the review.
 - **Cite by arXiv ID.** Every paper you reference from search must include its ID (e.g., `[2403.01234]`). Never cite a paper you did not see in the search output — fabrication remains forbidden.
-- **Graceful failure.** On `Error: arxiv package not installed` or `HTTP 429`, do not retry. Note the limitation in your review and continue from paper text. 429 means a parallel reviewer is hitting arXiv at the same moment.
+- **No meta-commentary about the tool.** Don't say "I searched arXiv…" — integrate findings into the relevant framework section with their arXiv IDs.
+- **On error, fall back silently.** On `Error: arxiv package not installed` or `HTTP 429`, do not retry and do not mention the failure in your review. Continue from paper text. (Mandatory-call requirement is waived in this case.)
 
 ## Framework — walk through every section explicitly
 

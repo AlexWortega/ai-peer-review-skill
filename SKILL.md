@@ -132,12 +132,13 @@ Don't strip the SSoT block from prompts. Don't seed the reviewers from the host 
 
 Every reviewer (standard and alignment-forum) has unconditional access to `python3 {skill_dir}/scripts/arxiv_search.py "<query>"` via Bash. The script returns `[arxiv_id] (year) Title / Authors / Summary` rows, capped at 8 results, sorted by relevance (or `--sort date` for recency). The arxiv client uses 5 s delay + 4 retries to absorb arXiv's per-IP throttling under concurrent reviewer access.
 
-Reviewers are encouraged to use it whenever a literature check would strengthen their critique — not gated on a specific LENS/AXIS. Typical high-value queries: missing prior art, stronger baselines, replication attempts, follow-up counter-results, "first to do X" verification, established benchmarks the paper should have used.
+Reviewers are **required** to run at least one arXiv query (mandatory minimum = 1, hard cap = 3). Typical high-value queries: missing prior art, stronger baselines, replication attempts, follow-up counter-results, "first to do X" verification, established benchmarks the paper should have used. A red-team without a literature check is half a red-team — and earlier prompt versions made the call optional, which Sonnet correctly read as "skip" since the paper text is fully in the prompt.
 
-Hard caps enforced in the prompt:
-- **Max 3 calls per reviewer.** Across a 3-reviewer panel that is up to 9 sequential arXiv hits — manageable with the script's delay, but reviewers are told to spend the budget on highest-value queries only.
+Rules enforced in each reviewer prompt:
+- **Min 1, max 3 calls per reviewer.** With a 3-reviewer panel that is 3–9 sequential arXiv hits, absorbed by the client's 5 s delay + 4 retries.
 - **Cite by arXiv ID only.** Reviewers must never cite a paper they did not see in search output.
-- **Graceful failure.** Both `Error: arxiv package not installed` and `HTTP 429` are handled as no-retry, fall-back-to-paper-text events. The reviewer notes the limitation in their review.
+- **No meta-commentary about the tool.** Findings get integrated into Major/Minor concerns with their arXiv IDs — no "I searched arXiv and found…" framing.
+- **Silent fallback on error.** `Error: arxiv package not installed` or `HTTP 429` → no retry, no mention in the review, mandatory-call requirement waived.
 
 Dependency: `pip install arxiv`. Not bundled — install once in the environment that runs the reviewer subagents. Without it, reviewers degrade gracefully (no prior-art lookup, otherwise normal review).
 
