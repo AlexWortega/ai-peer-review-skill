@@ -35,39 +35,38 @@ If extraction yields fewer than ~1000 characters or text is mostly garbled (comm
 
 Confirm the document looks like an academic paper (abstract, methods/results, references). If not, ask the user to confirm before proceeding.
 
-### 3. Spawn reviewers in parallel — MANDATORY
+### 3. Spawn reviewers in parallel via `spawn_reviewers.py`
 
-You MUST emit all `num_reviewers` Agent invocations as parallel `tool_use` blocks **inside a single assistant turn**. This is the core mechanic of the skill — without it, the skill is just slow sequential reviews, which is what the user is paying you to avoid.
+**Do NOT use the Agent tool to spawn reviewers.** In headless `claude -p` mode the host serializes tool_use blocks, which makes Agent-based parallelism collapse into sequential ~3 min/reviewer runs. We sidestep this by spawning reviewers as independent `claude -p` subprocesses through a Python helper.
 
-**WRONG — never do this:**
-- Turn 1: emit one Agent call for alfa, wait for the result.
-- Turn 2: emit one Agent call for bravo, wait for the result.
-- Turn 3: emit one Agent call for charlie, wait for the result.
+Issue exactly **one Bash call**:
 
-This produces 3× the wall-clock time and is the failure mode this skill exists to prevent.
+```bash
+python3 {skill_dir}/scripts/spawn_reviewers.py \
+  --paper-text-file /tmp/paper_text.txt \
+  --output-dir <output_dir> \
+  --skill-dir {skill_dir} \
+  --num-reviewers <N> \
+  --domain "<domain>" \
+  --model sonnet \
+  $([ <alignment_critic> = false ] && echo --no-alignment-critic) \
+  $([ <overwrite> = true ] && echo --overwrite)
+```
 
-**RIGHT — always do this:**
-- Single turn: emit `num_reviewers` Agent `tool_use` blocks back-to-back in ONE assistant message. The runtime executes them concurrently. You get all results in roughly `max(reviewer_time)` instead of `sum(reviewer_time)`.
+What this does:
+- Forks `N` `claude -p --model sonnet` subprocesses concurrently. True OS-level parallelism — total wall-clock = `max(reviewer_time)`, not `sum(reviewer_time)`.
+- Each child reads its prompt from stdin (paper_text + reviewer instructions), writes its review to `<output_dir>/review_<codename>.md` directly.
+- Each child is a full Claude Code instance with tool access (Bash, arxiv_search, etc.) — no functional regression vs. Agent-based path.
+- One slot is randomly assigned `prompts/reviewer_alignment_forum.md` if `alignment_critic=true`. Anonymity is preserved (the script does not disclose which slot was the critic).
+- Skips reviewers whose `review_<codename>.md` already exists, unless `--overwrite` is passed (corresponds to skill's `overwrite=true`).
 
-**Self-check before emitting your first Agent call:** Am I about to emit `num_reviewers` separate `tool_use` blocks in this single response? If only one is drafted, stop and add the others. If you find yourself writing prose like "Now let me start with alfa…" or "Next I'll spawn bravo…" between Agent calls, you are already failing — go back and bundle them.
+NATO codenames in order: `alfa, bravo, charlie, delta, echo, foxtrot, golf, hotel`. The script picks the first `N`.
 
-The only correct pattern is N Agent invocations, one assistant message, no narration in between.
+The script writes progress lines to stderr (`[spawn_reviewers] alfa started (pid=…, t+0.1s)`, `[spawn_reviewers] alfa OK (t+45.2s)`) so you can verify all reviewers started in roughly the same second — that is the parallelism check.
 
-For each reviewer:
-- `subagent_type`: `general-purpose`
-- `model`: `"sonnet"` — **mandatory**. Reviewer subagents must run on Sonnet, not inherit the main thread's model. Opus for 5 parallel reviewers is slow and wasteful; Sonnet 4.6 is fast and produces high-quality reviews on this task. The meta-review stays on whatever the main thread runs (typically Opus).
-- `description`: `"Independent peer review (codename <nato>)"`
-- `prompt`: see prompt assignment below.
+Sonnet is mandatory for reviewers (`--model sonnet`). Don't downgrade to Haiku or upgrade to Opus without explicit user request — Sonnet 4.6 is the design point.
 
-NATO codenames in order: `alfa, bravo, charlie, delta, echo, foxtrot, golf, hotel`.
-
-**Prompt assignment:**
-- If `alignment_critic=true` (default), pick **exactly one** codename uniformly at random from the panel and assign it `prompts/reviewer_alignment_forum.md`. The remaining `num_reviewers - 1` slots use `prompts/reviewer.md`. Do not disclose which codename is the critic — anonymity must be preserved through synthesis.
-- If `alignment_critic=false`, all slots use `prompts/reviewer.md`.
-
-Substitute `{domain}`, `{reviewer_id}`, `{paper_text}`, and `{skill_dir}` in each prompt before sending. `{skill_dir}` must be the absolute path to this skill's directory (so the reviewer can locate `scripts/arxiv_search.py`).
-
-Reviewers must NOT see each other's outputs. Each is a single, independent generation.
+Reviewers must NOT see each other's outputs. The script enforces this by giving each subprocess its own stdin and not sharing state.
 
 ### 4. Save individual reviews
 
@@ -127,8 +126,8 @@ Write `<output_dir>/results.json`:
 
 ## Rules
 
-- **Parallelism is mandatory** — one assistant message, N `Agent` calls. Sequential is wrong.
-- **Sonnet for reviewers is mandatory** — every `Agent` call must include `model: "sonnet"`. Don't let subagents inherit Opus from the main thread.
+- **Use `spawn_reviewers.py`, not the Agent tool.** Headless Claude Code serializes Agent calls; `claude -p` subprocesses do not. The script is the only supported path.
+- **Sonnet for reviewers is mandatory** — `spawn_reviewers.py` defaults to `--model sonnet`; don't override unless the user explicitly asks.
 - **Anonymity matters** — when synthesizing, refer to reviewers only by NATO codename. Don't disclose that they're all Claude subagents inside the meta-review prose.
 - **Don't soften the criticism.** The meta-review must preserve specific, actionable critiques. If a reviewer recommended "Reject", say so — don't average it into "Major revision" silently.
 - **Reuse existing reviews** when `overwrite=false` and `review_<nato>.md` already exists in `output_dir`. Only run the missing reviewers + meta-review.
