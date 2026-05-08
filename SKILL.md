@@ -1,6 +1,6 @@
 ---
 name: paper-review
-description: Use when the user asks for a peer review, critique, or meta-review of an academic paper (PDF, DOCX, or extracted text). Spawns N independent reviewer subagents in parallel using anonymized NATO codenames, then synthesizes a meta-review identifying common and unique concerns and a CSV concerns table. Adapted from poldrack/ai-peer-review. Triggers on phrases like "peer review this paper", "critique this PDF", "review like a reviewer would", "meta-review", "разбери эту статью как рецензент".
+description: Use when the user asks for a peer review, critique, or meta-review of an academic paper (PDF, DOCX, or extracted text). Spawns N independent reviewer subagents in parallel under anonymized NATO codenames, then synthesizes a meta-review identifying common and unique concerns plus a CSV concerns table. Adapted from poldrack/ai-peer-review. Triggers on phrases like "peer review this paper", "critique this PDF", "review like a reviewer would", "meta-review this manuscript", "act as reviewer 2".
 ---
 
 # Paper Peer Review
