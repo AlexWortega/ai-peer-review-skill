@@ -128,21 +128,18 @@ Why: N parallel Sonnet reviewers with the same prompt collapse to highly correla
 
 Don't strip the SSoT block from prompts. Don't seed the reviewers from the host (the model emitting its own SEED is the point of the technique).
 
-## arXiv prior-art lookup (`scripts/arxiv_search.py`)
+## arXiv lookup (`scripts/arxiv_search.py`)
 
-Reviewer prompts include an `External lookup — arXiv` block that lets a reviewer run `python3 {skill_dir}/scripts/arxiv_search.py "<query>"` via Bash to verify novelty claims. The script returns `[arxiv_id] (year) Title / Authors / Summary` rows, capped at 8 results, sorted by relevance (or `--sort date` for recency).
+Every reviewer (standard and alignment-forum) has unconditional access to `python3 {skill_dir}/scripts/arxiv_search.py "<query>"` via Bash. The script returns `[arxiv_id] (year) Title / Authors / Summary` rows, capped at 8 results, sorted by relevance (or `--sort date` for recency). The arxiv client uses 5 s delay + 4 retries to absorb arXiv's per-IP throttling under concurrent reviewer access.
 
-When this kicks in:
-- Standard reviewer with `LENS = Related work and novelty attribution` (LENS=4).
-- Alignment-forum critic with `AXIS = Overclaimed novelty` (AXIS=5).
-- Either reviewer when a specific novelty claim in the paper warrants a targeted check.
+Reviewers are encouraged to use it whenever a literature check would strengthen their critique — not gated on a specific LENS/AXIS. Typical high-value queries: missing prior art, stronger baselines, replication attempts, follow-up counter-results, "first to do X" verification, established benchmarks the paper should have used.
 
-Hard caps in the prompt:
-- Max 3 calls per review (avoid blowing up latency).
-- Cite found papers by arXiv ID only — fabrication remains forbidden.
-- If `arxiv` package is missing, the script returns a clear error; the reviewer falls back to text-only review.
+Hard caps enforced in the prompt:
+- **Max 3 calls per reviewer.** Across a 3-reviewer panel that is up to 9 sequential arXiv hits — manageable with the script's delay, but reviewers are told to spend the budget on highest-value queries only.
+- **Cite by arXiv ID only.** Reviewers must never cite a paper they did not see in search output.
+- **Graceful failure.** Both `Error: arxiv package not installed` and `HTTP 429` are handled as no-retry, fall-back-to-paper-text events. The reviewer notes the limitation in their review.
 
-Dependency: `pip install arxiv`. Not bundled — install once in the environment that runs the reviewer subagents. If the user runs the skill without arxiv installed, reviewers degrade gracefully (no prior-art lookup, otherwise normal review).
+Dependency: `pip install arxiv`. Not bundled — install once in the environment that runs the reviewer subagents. Without it, reviewers degrade gracefully (no prior-art lookup, otherwise normal review).
 
 ## The alignment-forum critic
 

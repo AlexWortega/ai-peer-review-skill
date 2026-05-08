@@ -21,7 +21,7 @@ def query_arxiv(query: str, max_papers: int = 8, sort: str = "relevance") -> str
     sort_by = sort_map.get(sort, arxiv.SortCriterion.Relevance)
 
     try:
-        client = arxiv.Client()
+        client = arxiv.Client(page_size=max_papers, delay_seconds=5.0, num_retries=4)
         search = arxiv.Search(query=query, max_results=max_papers, sort_by=sort_by)
         rows = []
         for p in client.results(search):
