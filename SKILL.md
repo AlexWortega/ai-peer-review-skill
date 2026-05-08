@@ -62,7 +62,13 @@ What this does:
 
 NATO codenames in order: `alfa, bravo, charlie, delta, echo, foxtrot, golf, hotel`. The script picks the first `N`.
 
-The script writes progress lines to stderr (`[spawn_reviewers] alfa started (pid=…, t+0.1s)`, `[spawn_reviewers] alfa OK (t+45.2s)`) so you can verify all reviewers started in roughly the same second — that is the parallelism check.
+The script writes progress lines to stderr:
+- `[spawn_reviewers] alfa started (pid=…, t+0.0s)` — spawn event. Successive reviewers are staggered by 10 s so all 3 don't slam arXiv at once and trigger 429 cascades.
+- `[spawn_reviewers] alfa OK (t+45.2s, size=12500)` — completed cleanly with sane content.
+- `[spawn_reviewers] alfa FAIL_CONTENT (t+45.2s, size=87, has_verdict=False)` — claude -p exited 0 but produced an empty or unstructured output. Treat this as a failed reviewer; surface it to the user, don't silently accept.
+- `[spawn_reviewers] alfa FAIL rc=N` — claude -p subprocess errored.
+
+Parallelism check: all reviewer `started` lines must appear within ~10 × (N-1) seconds (e.g., N=3 → all 3 starts within 20 s). If they're minutes apart, something is wrong with the launcher.
 
 Sonnet is mandatory for reviewers (`--model sonnet`). Don't downgrade to Haiku or upgrade to Opus without explicit user request — Sonnet 4.6 is the design point.
 

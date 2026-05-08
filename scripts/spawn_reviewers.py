@@ -57,14 +57,21 @@ def main() -> int:
 
     af_idx = random.randrange(n) if args.alignment_critic else -1
 
-    procs: list[tuple[str, subprocess.Popen | None, object]] = []
+    procs: list[tuple[str, subprocess.Popen | None, object, Path | None]] = []
     start = time.time()
+    spawn_count = 0
     for i, code in enumerate(codenames):
         out_path = output_dir / f"review_{code}.md"
         if out_path.exists() and not args.overwrite:
             print(f"[spawn_reviewers] skip {code} (exists, --overwrite not set)", file=sys.stderr, flush=True)
-            procs.append((code, None, None))
+            procs.append((code, None, None, None))
             continue
+        # Stagger spawns by 10 s so concurrent reviewers don't all hit arXiv
+        # in the same instant and trigger 429 cascades. Trades a small amount
+        # of wall-clock for much higher reliability per reviewer.
+        if spawn_count > 0:
+            time.sleep(10)
+        spawn_count += 1
         template = af_template if i == af_idx else standard_template
         prompt = build_prompt(
             template,
@@ -94,19 +101,17 @@ def main() -> int:
             file=sys.stderr,
             flush=True,
         )
-        procs.append((code, proc, out_fh))
+        procs.append((code, proc, out_fh, out_path))
 
     rc_total = 0
-    for code, proc, out_fh in procs:
+    for code, proc, out_fh, out_path in procs:
         if proc is None:
             continue
         rc = proc.wait()
         if out_fh is not None:
             out_fh.close()
         elapsed = time.time() - start
-        if rc == 0:
-            print(f"[spawn_reviewers] {code} OK (t+{elapsed:.1f}s)", file=sys.stderr, flush=True)
-        else:
+        if rc != 0:
             err = proc.stderr.read() if proc.stderr else ""
             print(
                 f"[spawn_reviewers] {code} FAIL rc={rc} (t+{elapsed:.1f}s): {err[:500]}",
@@ -114,6 +119,22 @@ def main() -> int:
                 flush=True,
             )
             rc_total = max(rc_total, rc)
+            continue
+        # Content validation — claude -p can exit 0 with empty / truncated output
+        # (rate-limit cascade, max-turns cutoff). Treat that as a content failure
+        # so the host doesn't silently accept a broken review.
+        content = out_path.read_text() if out_path is not None else ""
+        size = len(content)
+        has_verdict = ("## Verdict" in content) or ("### Verdict" in content)
+        if size < 500 or not has_verdict:
+            print(
+                f"[spawn_reviewers] {code} FAIL_CONTENT (t+{elapsed:.1f}s, size={size}, has_verdict={has_verdict})",
+                file=sys.stderr,
+                flush=True,
+            )
+            rc_total = max(rc_total, 1)
+            continue
+        print(f"[spawn_reviewers] {code} OK (t+{elapsed:.1f}s, size={size})", file=sys.stderr, flush=True)
 
     return rc_total
 
